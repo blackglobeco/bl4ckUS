@@ -8,8 +8,9 @@
 <h1 style="color: white; text-align: center; font-family: Arial, sans-serif; margin: 20px 0; font-size: 28px;">BlackAI ⚛ URL Spyware</h1>
 
 <div style="text-align: center; margin: 40px 0;">
-  <input type="text" id="urlTextBox" value="https://9qj775-5000.csb.app/" readonly style="width: 200px; padding: 5px; font-family: Arial, sans-serif; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; margin-right: 5px;">
-  <button onclick="copyToClipboard()" style="padding: 5px 10px; font-family: Arial, sans-serif; font-size: 12px; background-color: #cc0000; color: white; border: none; border-radius: 4px; cursor: pointer;">Copy URL</button>
+  <input type="text" id="urlTextBox" value="<%= currentUrl %>" readonly style="width: 200px; padding: 5px; font-family: Arial, sans-serif; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; margin-right: 5px;">
+  <button onclick="copyToClipboard()" style="padding: 5px 10px; font-family: Arial, sans-serif; font-size: 12px; background-color: #cc0000; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px;">Copy URL</button>
+  <button id="editBtn" onclick="toggleEdit()" style="padding: 5px 10px; font-family: Arial, sans-serif; font-size: 12px; background-color: #cc0000; color: white; border: none; border-radius: 4px; cursor: pointer;">Edit URL</button>
 </div>
 
 <style type="text/css">
@@ -84,6 +85,57 @@ function copyToClipboard() {
     button.innerText = originalText;
     button.style.backgroundColor = "#b30000";
   }, 2000);
+}
+
+function toggleEdit() {
+  var textBox = document.getElementById("urlTextBox");
+  var editBtn = document.getElementById("editBtn");
+  
+  if (textBox.readOnly) {
+    textBox.readOnly = false;
+    textBox.style.backgroundColor = "#ffffff";
+    textBox.style.border = "2px solid #cc0000";
+    textBox.focus();
+    editBtn.innerText = "Save URL";
+    editBtn.style.backgroundColor = "#009900";
+  } else {
+    // Save the URL to server
+    var newUrl = textBox.value;
+    
+    fetch('/update-url', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'url=' + encodeURIComponent(newUrl)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        textBox.readOnly = true;
+        textBox.style.backgroundColor = "#f9f9f9";
+        textBox.style.border = "1px solid #ccc";
+        editBtn.innerText = "Edit URL";
+        editBtn.style.backgroundColor = "#cc0000";
+        
+        // Show confirmation message
+        var originalText = editBtn.innerText;
+        editBtn.innerText = "URL Saved!";
+        editBtn.style.backgroundColor = "#006600";
+        
+        setTimeout(function() {
+          editBtn.innerText = originalText;
+          editBtn.style.backgroundColor = "#cc0000";
+        }, 2000);
+      } else {
+        alert('Failed to save URL');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Failed to save URL');
+    });
+  }
 }
 
 window.onload = function (){
