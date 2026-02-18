@@ -18,7 +18,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24' # You can change this to 18 or 22 if needed
-          cache: 'npm'       # Speeds up future runs by caching dependencies
 
       - name: Install Dependencies
         run: npm install
